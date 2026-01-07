@@ -25,7 +25,7 @@ app.set("trust proxy", true);
 app.use(helmet());
 app.use(
   cors({
-    origin: ["http://localhost:3000", "https://yourfrontend.com"],
+    origin: ["http://localhost:3000", "https://vdr.tjdem.online"],
     credentials: true,
   })
 );
