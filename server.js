@@ -21,12 +21,25 @@ dotenv.config();
 const app = express();
 app.set("trust proxy", true);
 
-// Middleware
-app.use(helmet());
+// CORS configuration - must come before helmet
+const corsOptions = {
+  origin: ["https://vdr.tjdem.online", "http://localhost:3000"],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+};
+
+// Handle preflight requests
+app.options("*", cors(corsOptions));
+
+// Apply CORS
+app.use(cors(corsOptions));
+
+// Helmet with CORS-compatible settings
 app.use(
-  cors({
-    origin: ["http://localhost:3000", "https://vdr.tjdem.online"],
-    credentials: true,
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
   })
 );
 app.use(express.json({ limit: "10mb" }));
