@@ -45,19 +45,19 @@ app.use(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/files", fileRoutes);
-app.use("/api/groups", groupRoutes);
-app.use("/api/access", accessRoutes);
-app.use("/api/trash", trashRoutes);
-app.use("/api/favorites", favoriteRoutes);
-app.use("/api/notifications", notificationRoutes);
-app.use("/api/storage", storageRoutes);
-app.use("/api/reports", reportRoutes);
-app.use("/api/settings", settingsRoutes);
-app.use("/api/logs", logRoutes);
+// Routes (Nginx strips /api prefix, so use paths without /api)
+app.use("/auth", authRoutes);
+app.use("/users", userRoutes);
+app.use("/files", fileRoutes);
+app.use("/groups", groupRoutes);
+app.use("/access", accessRoutes);
+app.use("/trash", trashRoutes);
+app.use("/favorites", favoriteRoutes);
+app.use("/notifications", notificationRoutes);
+app.use("/storage", storageRoutes);
+app.use("/reports", reportRoutes);
+app.use("/settings", settingsRoutes);
+app.use("/logs", logRoutes);
 
 // Health check
 app.get("/", (req, res) => res.send("✅ VDR Backend Running"));
