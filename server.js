@@ -16,6 +16,7 @@ import storageRoutes from "./routes/storageRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import logRoutes from "./routes/logRoutes.js";
+import orgRoutes from "./routes/orgRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -58,6 +59,7 @@ app.use("/storage", storageRoutes);
 app.use("/reports", reportRoutes);
 app.use("/settings", settingsRoutes);
 app.use("/logs", logRoutes);
+app.use("/org", orgRoutes);
 
 // Health check
 app.get("/", (req, res) => res.send("✅ VDR Backend Running"));
