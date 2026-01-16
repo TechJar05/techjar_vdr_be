@@ -18,74 +18,39 @@ const execSql = (sql) =>
 const esc = (s = "") => String(s).replace(/'/g, "''");
 
 /**
- * GET USER STORAGE - Get user's storage quota and usage
+ * GET USER STORAGE - Get total uploaded files size across all folders
+ * This now shows the total size of all files uploaded to the system (not virtual storage)
  */
 export const getUserStorage = async (req, res) => {
   try {
     const userEmail = req.user?.email;
     if (!userEmail) return res.status(400).json({ error: "User email missing" });
 
-    // Create STORAGE table if missing
-    const createTableSql = `CREATE TABLE IF NOT EXISTS USER_STORAGE (
-      ID NUMBER AUTOINCREMENT PRIMARY KEY,
-      USER_EMAIL STRING UNIQUE,
-      TOTAL_QUOTA_MB NUMBER DEFAULT 5000,
-      USED_MB NUMBER DEFAULT 0,
-      CREATED_AT TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP(),
-      UPDATED_AT TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP()
-    )`;
-    await execSql(createTableSql);
+    // Default quota (5GB = 5000MB)
+    const totalQuotaMb = 5000;
 
-    // Get or create storage record
-    const selectSql = `SELECT * FROM USER_STORAGE WHERE USER_EMAIL='${esc(userEmail)}' LIMIT 1`;
-    const { rows } = await execSql(selectSql);
-
-    // Ensure STORAGE_FILES exists or handle gracefully when missing
-    let usedSum = 0;
+    // Calculate total size of all uploaded files from FILES table
+    let usedBytes = 0;
     try {
-      // Sum only file entries; exclude folder rows (folders store an aggregate size and would double-count)
-      const sumSql = `SELECT COALESCE(SUM(FILE_SIZE_MB),0) AS USED_SUM FROM STORAGE_FILES WHERE USER_EMAIL='${esc(userEmail)}' AND (ITEM_TYPE IS NULL OR ITEM_TYPE != 'folder')`;
+      const sumSql = `SELECT COALESCE(SUM(FILE_SIZE), 0) AS TOTAL_SIZE FROM FILES`;
       const { rows: sumRows } = await execSql(sumSql);
       if (sumRows && sumRows.length > 0) {
-        usedSum = Number(sumRows[0].USED_SUM || 0);
+        usedBytes = Number(sumRows[0].TOTAL_SIZE || 0);
       }
     } catch (sumErr) {
-      // If STORAGE_FILES doesn't exist yet, treat used as 0
-      usedSum = 0;
+      console.warn('[getUserStorage] Could not sum FILES:', sumErr.message);
+      usedBytes = 0;
     }
 
-    if (!rows || rows.length === 0) {
-      // Create new record with 5GB quota and set USED_MB to computed sum
-      const insertSql = `
-        INSERT INTO USER_STORAGE (USER_EMAIL, TOTAL_QUOTA_MB, USED_MB)
-        SELECT '${esc(userEmail)}', 5000, ${usedSum}
-      `;
-      await execSql(insertSql);
-      const percentUsed = 5000 > 0 ? ((usedSum / 5000) * 100).toFixed(2) : 0;
-      return res.json({ userEmail, totalQuotaMb: 5000, usedMb: usedSum, percentUsed: parseFloat(percentUsed) });
-    }
+    // Convert bytes to MB
+    const usedMb = usedBytes / (1024 * 1024);
+    const percentUsed = totalQuotaMb > 0 ? ((usedMb / totalQuotaMb) * 100) : 0;
 
-    // Sync the USER_STORAGE.USED_MB to the actual sum to keep quota consistent
-    const storage = rows[0];
-    if (Number(storage.USED_MB || 0) !== usedSum) {
-      const updateSql = `
-        UPDATE USER_STORAGE
-        SET USED_MB = ${usedSum}, UPDATED_AT = CURRENT_TIMESTAMP()
-        WHERE USER_EMAIL='${esc(userEmail)}'
-      `;
-      try {
-        await execSql(updateSql);
-      } catch (updateErr) {
-        console.warn('[getUserStorage] failed to sync USER_STORAGE USED_MB', updateErr.message);
-      }
-    }
-
-    const percentUsed = storage.TOTAL_QUOTA_MB > 0 ? ((usedSum / storage.TOTAL_QUOTA_MB) * 100).toFixed(2) : 0;
     return res.json({
       userEmail,
-      totalQuotaMb: storage.TOTAL_QUOTA_MB,
-      usedMb: usedSum,
-      percentUsed: parseFloat(percentUsed),
+      totalQuotaMb: totalQuotaMb,
+      usedMb: parseFloat(usedMb.toFixed(2)),
+      percentUsed: parseFloat(percentUsed.toFixed(2)),
     });
   } catch (err) {
     console.error("[getUserStorage] error:", err.message);
