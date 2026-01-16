@@ -17,6 +17,7 @@ import reportRoutes from "./routes/reportRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import logRoutes from "./routes/logRoutes.js";
 import orgRoutes from "./routes/orgRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -24,7 +25,7 @@ app.set("trust proxy", true);
 
 // CORS configuration - must come before helmet
 const corsOptions = {
-  origin: ["https://vdr.tjdem.online", "http://localhost:3000"],
+  origin: ["https://vdr.tjdem.online", "http://localhost:3000", "http://localhost:5173", "http://localhost:5174"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
@@ -60,6 +61,7 @@ app.use("/reports", reportRoutes);
 app.use("/settings", settingsRoutes);
 app.use("/logs", logRoutes);
 app.use("/org", orgRoutes);
+app.use("/superadmin", adminRoutes);
 
 // Health check
 app.get("/", (req, res) => res.send("✅ VDR Backend Running"));
