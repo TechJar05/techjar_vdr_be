@@ -357,6 +357,55 @@ export const revokeAllAccess = async (req, res) => {
 };
 
 /**
+ * GET USERS WITH ACCESS - Get list of users who have access to an item
+ * GET /api/access/item-users?itemId=X&itemType=file
+ */
+export const getItemUsers = async (req, res) => {
+  try {
+    const { itemId, itemType } = req.query;
+    if (!itemId || !itemType) {
+      return res.status(400).json({ error: "Missing itemId or itemType" });
+    }
+
+    // Get all approved access requests for this item
+    const sql = `
+      SELECT USER_EMAIL, ACCESS_TYPES, APPROVED_AT, APPROVED_BY
+      FROM ACCESS_REQUESTS
+      WHERE ITEM_ID='${esc(itemId)}' AND ITEM_TYPE='${esc(itemType)}' AND STATUS='approved'
+      ORDER BY APPROVED_AT DESC
+    `;
+    const { rows } = await execSql(sql);
+
+    // Also include the admin users (they always have access)
+    const adminSql = `SELECT EMAIL, NAME FROM USERS WHERE ROLE='admin' LIMIT 20`;
+    let admins = [];
+    try {
+      const { rows: adminRows } = await execSql(adminSql);
+      admins = (adminRows || []).map((a) => ({
+        USER_EMAIL: a.EMAIL,
+        ACCESS_TYPES: "VIEW,DOWNLOAD,UPLOAD,COMMENT",
+        isAdmin: true,
+      }));
+    } catch (e) {
+      console.warn("Could not fetch admin users:", e.message);
+    }
+
+    // Combine and deduplicate
+    const allUsers = [...admins];
+    (rows || []).forEach((r) => {
+      if (!allUsers.find((u) => u.USER_EMAIL === r.USER_EMAIL)) {
+        allUsers.push(r);
+      }
+    });
+
+    return res.json(allUsers);
+  } catch (err) {
+    console.error("[getItemUsers] error:", err.message);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+/**
  * REVOKE SPECIFIC ACCESS TYPE - Admin revokes specific access type
  * PUT /api/access/requests/:id
  * Body: { action: 'revoke', accessType: 'UPLOAD' }

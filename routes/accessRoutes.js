@@ -6,6 +6,7 @@ import {
   checkUserAccess,
   revokeAllAccess,
   revokeSpecificAccess,
+  getItemUsers,
 } from "../controllers/accessController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -32,5 +33,8 @@ router.delete("/requests/:id", protect, revokeAllAccess);
 
 // Check if user has access
 router.get("/check", protect, checkUserAccess);
+
+// Get list of users who have access to an item
+router.get("/item-users", protect, getItemUsers);
 
 export default router;
